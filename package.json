@@ -2,7 +2,7 @@
   "name": "prompt-db",
   "displayName": "Prompt DB",
   "description": "Save, manage and paste AI prompts from a sidebar panel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "prompt-db",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
@@ -65,6 +65,12 @@
         "category": "Prompt DB"
       },
       {
+        "command": "promptdb.toggleGrouping",
+        "title": "Toggle Category Grouping",
+        "icon": "$(list-tree)",
+        "category": "Prompt DB"
+      },
+      {
         "command": "promptdb.exportPrompts",
         "title": "Export Prompts",
         "icon": "$(export)",
@@ -88,6 +94,11 @@
           "command": "promptdb.quickPick",
           "when": "view == promptdb.promptsList",
           "group": "navigation@2"
+        },
+        {
+          "command": "promptdb.toggleGrouping",
+          "when": "view == promptdb.promptsList",
+          "group": "navigation@3"
         },
         {
           "command": "promptdb.exportPrompts",
@@ -129,6 +140,12 @@
         "key": "ctrl+shift+`",
         "mac": "cmd+shift+`"
       }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "promptdb.promptsList",
+        "contents": "No prompts saved yet.\n[Add a prompt](command:promptdb.addPrompt) or [import a JSON file](command:promptdb.importPrompts)."
+      }
     ]
   },
   "scripts": {
@@ -136,6 +153,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
+    "test": "npm run compile && node --test out/promptCodec.test.js",
     "package": "vsce package"
   },
   "devDependencies": {

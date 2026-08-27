@@ -1,11 +1,8 @@
 import * as vscode from 'vscode';
 import { Prompt } from './types';
+import { FormFields, sanitizeForm } from './promptCodec';
 
-export interface FormResult {
-  name: string;
-  body: string;
-  category: string;
-}
+export type FormResult = FormFields;
 
 export function openPromptForm(
   context: vscode.ExtensionContext,
@@ -21,30 +18,52 @@ export function openPromptForm(
       { enableScripts: true, retainContextWhenHidden: true }
     );
 
-    panel.webview.html = buildHtml(title, categories, initial);
+    const nonce = getNonce();
+    panel.webview.html = buildHtml(title, categories, initial, nonce);
 
     let resolved = false;
-
-    panel.webview.onDidReceiveMessage((msg: { type: string; data?: FormResult }) => {
+    const finish = (value: FormResult | undefined) => {
       if (resolved) return;
-      if (msg.type === 'submit' && msg.data) {
-        resolved = true;
-        panel.dispose();
-        resolve(msg.data);
-      } else if (msg.type === 'cancel') {
-        resolved = true;
-        panel.dispose();
-        resolve(undefined);
+      resolved = true;
+      panel.dispose();
+      resolve(value);
+    };
+
+    const incoming = panel.webview.onDidReceiveMessage((msg: { type?: string; data?: unknown }) => {
+      if (resolved) return;
+      if (msg?.type === 'submit') {
+        const data = sanitizeForm(msg.data);
+        if (!data) return;
+        finish(data);
+      } else if (msg?.type === 'cancel') {
+        finish(undefined);
       }
     });
 
     panel.onDidDispose(() => {
+      incoming.dispose();
       if (!resolved) resolve(undefined);
     });
+
+    context.subscriptions.push(panel);
   });
 }
 
-function buildHtml(title: string, categories: string[], initial?: Prompt): string {
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function getNonce(): string {
+  let text = '';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) text += chars.charAt(Math.floor(Math.random() * chars.length));
+  return text;
+}
+
+function buildHtml(title: string, categories: string[], initial: Prompt | undefined, nonce: string): string {
   const esc = (s = '') => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const catOptions = categories
     .map(c => `<option value="${esc(c)}"${initial?.category === c ? ' selected' : ''}>${esc(c)}</option>`)
@@ -54,8 +73,8 @@ function buildHtml(title: string, categories: string[], initial?: Prompt): strin
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
-<style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
+<style nonce="${nonce}">
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -194,8 +213,8 @@ function buildHtml(title: string, categories: string[], initial?: Prompt): strin
   <button class="btn-secondary" id="btn-cancel">Cancel</button>
 </div>
 
-<script>
-  const vscode = acquireVscodContext();
+<script nonce="${nonce}">
+  const vscode = acquireVsCodeApi();
 
   const nameEl = document.getElementById('name');
   const bodyEl = document.getElementById('body');
@@ -228,7 +247,7 @@ function buildHtml(title: string, categories: string[], initial?: Prompt): strin
       }
     });
     // Pre-select current category
-    const current = ${JSON.stringify(initial?.category ?? '')};
+    const current = ${jsonForScript(initial?.category ?? '')};
     if (current && catSelect) {
       const opt = [...catSelect.options].find(o => o.value === current);
       if (opt) catSelect.value = current;
@@ -264,7 +283,7 @@ function buildHtml(title: string, categories: string[], initial?: Prompt): strin
       type: 'submit',
       data: {
         name: nameEl.value.trim(),
-        body: bodyEl.value.trim(),
+        body: bodyEl.value,
         category: getCategory(),
       }
     });
@@ -285,10 +304,6 @@ function buildHtml(title: string, categories: string[], initial?: Prompt): strin
   });
 
   nameEl.focus();
-
-  function acquireVscodContext() {
-    return acquireVsCodeApi();
-  }
 </script>
 </body>
 </html>`;

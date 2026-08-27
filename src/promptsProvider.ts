@@ -1,18 +1,25 @@
 import * as vscode from 'vscode';
 import { Prompt } from './types';
 import { PromptsManager } from './promptsManager';
+import { escapeMarkdown } from './promptCodec';
 
 export class PromptItem extends vscode.TreeItem {
   constructor(public readonly prompt: Prompt) {
     super(prompt.name, vscode.TreeItemCollapsibleState.None);
+    this.id = `prompt:${prompt.id}`;
     this.description = prompt.category || '';
-    this.tooltip = new vscode.MarkdownString(
-      `**${prompt.name}**${prompt.category ? `  \n_${prompt.category}_` : ''}\n\n---\n\n${prompt.body}`
-    );
+    const md = new vscode.MarkdownString();
+    md.appendMarkdown(`**${escapeMarkdown(prompt.name)}**`);
+    if (prompt.category) {
+      md.appendMarkdown(`  \n_${escapeMarkdown(prompt.category)}_`);
+    }
+    md.appendMarkdown('\n\n---\n\n');
+    md.appendText(prompt.body);
+    this.tooltip = md;
     this.contextValue = 'promptItem';
     this.command = {
-      command: 'promptdb.copyPrompt',
-      title: 'Copy to Clipboard',
+      command: 'promptdb.editPrompt',
+      title: 'Edit Prompt',
       arguments: [this],
     };
   }
@@ -24,6 +31,7 @@ export class CategoryItem extends vscode.TreeItem {
     public readonly children: PromptItem[]
   ) {
     super(category || 'Uncategorized', vscode.TreeItemCollapsibleState.Expanded);
+    this.id = `category:${category || '__none__'}`;
     this.contextValue = 'categoryItem';
     this.iconPath = new vscode.ThemeIcon('folder');
     this.description = `${children.length} prompt${children.length !== 1 ? 's' : ''}`;
@@ -39,7 +47,15 @@ export class PromptsProvider implements vscode.TreeDataProvider<TreeNode> {
 
   constructor(private readonly manager: PromptsManager) {}
 
+  dispose(): void {
+    this._onChange.dispose();
+  }
+
   refresh(): void { this._onChange.fire(); }
+
+  isGrouped(): boolean {
+    return this.groupByCategory;
+  }
 
   toggleGrouping(): void {
     this.groupByCategory = !this.groupByCategory;
