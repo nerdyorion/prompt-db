@@ -1,0 +1,147 @@
+{
+  "name": "prompt-db",
+  "displayName": "Prompt DB",
+  "description": "Save, manage and paste AI prompts from a sidebar panel",
+  "version": "0.1.0",
+  "publisher": "prompt-db",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "prompt-db",
+          "title": "Prompt DB",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "prompt-db": [
+        {
+          "id": "promptdb.promptsList",
+          "name": "Prompts",
+          "contextualTitle": "Prompt DB"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "promptdb.addPrompt",
+        "title": "Add Prompt",
+        "icon": "$(add)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.editPrompt",
+        "title": "Edit Prompt",
+        "icon": "$(edit)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.deletePrompt",
+        "title": "Delete Prompt",
+        "icon": "$(trash)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.copyPrompt",
+        "title": "Copy to Clipboard",
+        "icon": "$(clippy)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.insertPrompt",
+        "title": "Insert at Cursor",
+        "icon": "$(insert)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.quickPick",
+        "title": "Search Prompts…",
+        "icon": "$(search)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.exportPrompts",
+        "title": "Export Prompts",
+        "icon": "$(export)",
+        "category": "Prompt DB"
+      },
+      {
+        "command": "promptdb.importPrompts",
+        "title": "Import Prompts",
+        "icon": "$(import)",
+        "category": "Prompt DB"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "promptdb.addPrompt",
+          "when": "view == promptdb.promptsList",
+          "group": "navigation@1"
+        },
+        {
+          "command": "promptdb.quickPick",
+          "when": "view == promptdb.promptsList",
+          "group": "navigation@2"
+        },
+        {
+          "command": "promptdb.exportPrompts",
+          "when": "view == promptdb.promptsList",
+          "group": "2_export@1"
+        },
+        {
+          "command": "promptdb.importPrompts",
+          "when": "view == promptdb.promptsList",
+          "group": "2_export@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "promptdb.copyPrompt",
+          "when": "view == promptdb.promptsList && viewItem == promptItem",
+          "group": "inline@1"
+        },
+        {
+          "command": "promptdb.insertPrompt",
+          "when": "view == promptdb.promptsList && viewItem == promptItem",
+          "group": "inline@2"
+        },
+        {
+          "command": "promptdb.editPrompt",
+          "when": "view == promptdb.promptsList && viewItem == promptItem",
+          "group": "inline@3"
+        },
+        {
+          "command": "promptdb.deletePrompt",
+          "when": "view == promptdb.promptsList && viewItem == promptItem",
+          "group": "2_modify@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "promptdb.quickPick",
+        "key": "ctrl+shift+`",
+        "mac": "cmd+shift+`"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  }
+}
