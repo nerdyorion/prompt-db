@@ -1,6 +1,6 @@
 # Prompt DB
 
-VS Code / Cursor extension that stores named AI prompt snippets and pastes them from a sidebar or Quick Pick. Released under the [MIT License](LICENSE).
+VS Code / Cursor extension that stores named AI prompt snippets and pastes them from a sidebar or Quick Pick. Released under the MIT License (see the `LICENSE` file in this folder).
 
 Prompts live in **global storage** (not in the workspace), so the same library is available in every window.
 

@@ -155,7 +155,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
     "test": "npm run compile && node --test out/*.test.js",
-    "package": "vsce package"
+    "package": "vsce package --allow-missing-repository"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
