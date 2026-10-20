@@ -1,26 +1,26 @@
-import * as vscode from 'vscode';
 import { Prompt } from './types';
 import { FormFields, newPromptId, parsePromptStore } from './promptCodec';
 
+export interface PromptStoreIO {
+  readFile(name: string): Promise<Uint8Array>;
+  writeFile(name: string, data: Uint8Array): Promise<void>;
+  rename(from: string, to: string, overwrite?: boolean): Promise<void>;
+  ensureDir(): Promise<void>;
+  notifyError(message: string): void;
+  notifyWarning(message: string): void;
+}
+
 export class PromptsManager {
-  private readonly storageDir: vscode.Uri;
-  private readonly dbUri: vscode.Uri;
   private prompts: Prompt[] = [];
   /** False when the on-disk file exists but could not be read. Blocks save. */
   private storeReadable = true;
 
-  constructor(context: vscode.ExtensionContext) {
-    // Path is <globalStorage>/<publisher>.<name>/prompts.json
-    // Do not change package.json "publisher" or "name" — existing installs
-    // keep their data across VSIX rebuilds because this path stays stable.
-    this.storageDir = context.globalStorageUri;
-    this.dbUri = vscode.Uri.joinPath(this.storageDir, 'prompts.json');
-  }
+  constructor(private readonly io: PromptStoreIO) {}
 
   async load(): Promise<void> {
     let raw: Uint8Array;
     try {
-      raw = await vscode.workspace.fs.readFile(this.dbUri);
+      raw = await this.io.readFile('prompts.json');
     } catch (err) {
       if (isFileNotFound(err)) {
         this.prompts = [];
@@ -29,7 +29,7 @@ export class PromptsManager {
       }
       this.prompts = [];
       this.storeReadable = false;
-      vscode.window.showErrorMessage(
+      this.io.notifyError(
         `Prompt DB could not read prompts.json: ${errorMessage(err)}. Saving is disabled until this is resolved, so the file will not be overwritten.`
       );
       return;
@@ -61,12 +61,12 @@ export class PromptsManager {
         await this.backupRaw(raw);
         await this.write(this.prompts);
         if (result.dropped > 0) {
-          vscode.window.showWarningMessage(
+          this.io.notifyWarning(
             `Prompt DB ignored ${result.dropped} invalid record(s). A backup of the original file was saved.`
           );
         }
       } catch (err) {
-        vscode.window.showErrorMessage(
+        this.io.notifyError(
           `Prompt DB loaded your prompts but could not save a cleaned copy: ${errorMessage(err)}`
         );
       }
@@ -125,51 +125,40 @@ export class PromptsManager {
   }
 
   private async write(prompts: Prompt[]): Promise<void> {
-    await vscode.workspace.fs.createDirectory(this.storageDir);
-    const tmpUri = vscode.Uri.joinPath(this.storageDir, 'prompts.json.tmp');
+    await this.io.ensureDir();
     const buf = Buffer.from(JSON.stringify(prompts, null, 2), 'utf8');
-    await vscode.workspace.fs.writeFile(tmpUri, buf);
-    await vscode.workspace.fs.rename(tmpUri, this.dbUri, { overwrite: true });
+    await this.io.writeFile('prompts.json.tmp', buf);
+    await this.io.rename('prompts.json.tmp', 'prompts.json', true);
   }
 
-  private async backupRaw(raw: Uint8Array): Promise<vscode.Uri> {
-    await vscode.workspace.fs.createDirectory(this.storageDir);
-    const backupUri = vscode.Uri.joinPath(
-      this.storageDir,
-      `prompts.bak-${Date.now()}.json`
-    );
-    await vscode.workspace.fs.writeFile(backupUri, raw);
-    return backupUri;
+  private async backupRaw(raw: Uint8Array): Promise<string> {
+    await this.io.ensureDir();
+    const backupName = `prompts.bak-${Date.now()}.json`;
+    await this.io.writeFile(backupName, raw);
+    return backupName;
   }
 
   private async quarantine(raw: Uint8Array, reason: string): Promise<void> {
     try {
-      const backupUri = await this.backupRaw(raw);
-      const corruptUri = vscode.Uri.joinPath(
-        this.storageDir,
-        `prompts.corrupt-${Date.now()}.json`
-      );
+      const backupName = await this.backupRaw(raw);
       try {
-        await vscode.workspace.fs.rename(this.dbUri, corruptUri, { overwrite: true });
+        await this.io.rename('prompts.json', `prompts.corrupt-${Date.now()}.json`, true);
       } catch {
         // Backup already saved; original may still be in place.
       }
-      vscode.window.showErrorMessage(
-        `Prompt DB could not read your library (${reason}). A backup was saved at ${backupUri.fsPath}. Starting empty — the unreadable file was moved aside, not overwritten with an empty list.`
+      this.io.notifyError(
+        `Prompt DB could not read your library (${reason}). A backup was saved as ${backupName}. Starting empty — the unreadable file was moved aside, not overwritten with an empty list.`
       );
     } catch (err) {
       this.storeReadable = false;
-      vscode.window.showErrorMessage(
+      this.io.notifyError(
         `Prompt DB could not read prompts.json (${reason}) and backing it up failed: ${errorMessage(err)}. Saving is disabled so the file will not be overwritten.`
       );
     }
   }
 }
 
-function isFileNotFound(err: unknown): boolean {
-  if (err instanceof vscode.FileSystemError) {
-    return err.code === 'FileNotFound' || err.code === 'EntryNotFound';
-  }
+export function isFileNotFound(err: unknown): boolean {
   const code = (err as { code?: string }).code;
   return code === 'FileNotFound' || code === 'EntryNotFound' || code === 'ENOENT';
 }

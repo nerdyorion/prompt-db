@@ -1,16 +1,22 @@
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { PromptsManager } from './promptsManager';
+import { createPromptsManager } from './vscodeStore';
 import { PromptsProvider, PromptItem } from './promptsProvider';
 import { openPromptForm } from './promptForm';
 import { mergeImported, parsePromptStore } from './promptCodec';
 import { Prompt } from './types';
 
+const GROUPING_KEY = 'promptdb.groupByCategory';
+
 export async function activate(context: vscode.ExtensionContext) {
-  const manager = new PromptsManager(context);
+  const manager = createPromptsManager(context);
   await manager.load();
 
-  const provider = new PromptsProvider(manager);
+  const provider = new PromptsProvider(
+    manager,
+    context.globalState.get<boolean>(GROUPING_KEY, false)
+  );
   const treeView = vscode.window.createTreeView('promptdb.promptsList', {
     treeDataProvider: provider,
     showCollapseAll: true,
@@ -122,8 +128,9 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // ── Toggle grouping ───────────────────────────────────────────────────────
-  reg('promptdb.toggleGrouping', () => {
+  reg('promptdb.toggleGrouping', async () => {
     provider.toggleGrouping();
+    await context.globalState.update(GROUPING_KEY, provider.isGrouped());
     vscode.window.setStatusBarMessage(
       provider.isGrouped()
         ? '$(folder) Prompt DB: grouped by category'

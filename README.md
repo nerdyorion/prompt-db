@@ -1,6 +1,6 @@
 # Prompt DB
 
-VS Code / Cursor extension that stores named AI prompt snippets and pastes them from a sidebar or Quick Pick.
+VS Code / Cursor extension that stores named AI prompt snippets and pastes them from a sidebar or Quick Pick. Released under the [MIT License](LICENSE).
 
 Prompts live in **global storage** (not in the workspace), so the same library is available in every window.
 
@@ -22,7 +22,7 @@ Upgrading from 0.1.0 keeps your existing prompts. Do not change `publisher` or `
 2. Add a prompt (name, optional category, body).
 3. Copy, insert at the cursor, or edit from the inline icons. Clicking a row opens the editor.
 4. Search with the magnifying glass, or **Ctrl+Shift+`** / **Cmd+Shift+`**.
-5. Toggle category grouping from the tree toolbar.
+5. Toggle category grouping from the tree toolbar. The choice is remembered.
 
 Empty libraries show a welcome view with Add and Import.
 
@@ -64,7 +64,7 @@ If the file is unreadable, Prompt DB copies it to `prompts.bak-<timestamp>.json`
 
 ```bash
 npm install
-npm test          # compile + codec tests
+npm test          # compile + unit tests
 npm run watch     # typecheck in the background
 npm run package   # write prompt-db-<version>.vsix
 ```
@@ -75,6 +75,7 @@ Launch **Run Extension** from `.vscode/launch.json` to open an Extension Develop
 | --- | --- |
 | `src/extension.ts` | Commands, Quick Pick, import/export |
 | `src/promptsManager.ts` | Load/save `prompts.json` |
+| `src/vscodeStore.ts` | VS Code filesystem adapter |
 | `src/promptCodec.ts` | Validation, merge, ids |
 | `src/promptsProvider.ts` | Sidebar tree |
 | `src/promptForm.ts` | Add/edit webview |

@@ -43,9 +43,14 @@ type TreeNode = CategoryItem | PromptItem;
 export class PromptsProvider implements vscode.TreeDataProvider<TreeNode> {
   private readonly _onChange = new vscode.EventEmitter<TreeNode | undefined | void>();
   readonly onDidChangeTreeData = this._onChange.event;
-  private groupByCategory = false;
+  private groupByCategory: boolean;
 
-  constructor(private readonly manager: PromptsManager) {}
+  constructor(
+    private readonly manager: PromptsManager,
+    groupByCategory = false
+  ) {
+    this.groupByCategory = groupByCategory;
+  }
 
   dispose(): void {
     this._onChange.dispose();

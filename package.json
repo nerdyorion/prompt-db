@@ -4,6 +4,7 @@
   "description": "Save, manage and paste AI prompts from a sidebar panel",
   "version": "0.1.1",
   "publisher": "prompt-db",
+  "license": "MIT",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "activationEvents": [],
@@ -153,7 +154,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "npm run compile && node --test out/promptCodec.test.js",
+    "test": "npm run compile && node --test out/*.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
